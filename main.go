@@ -47,7 +47,7 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
-// 修改配置结构包含JSESSIONID
+// Config 修改配置结构包含JSESSIONID
 type Config struct {
 	BaseURL    string `json:"baseURL"`
 	JSessionID string `json:"jSessionID"`
@@ -77,7 +77,7 @@ func writeConfig(config *Config) error {
 	return ioutil.WriteFile(".cv-config", data, 0644)
 }
 
-// 修改Client初始化逻辑
+// NewClient 修改Client初始化逻辑
 func NewClient() *Client {
 	config, err := readConfig()
 	if err != nil {
