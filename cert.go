@@ -274,26 +274,55 @@ var CertCmd = &cobra.Command{
 
 // 列出证书命令
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List user certificates",
+	Use:   "list [uuid]",
+	Short: "List user certificates or show details of a specific certificate",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		keyword, _ := cmd.Flags().GetString("keyword")
-		page, _ := cmd.Flags().GetInt("page")
-		limit, _ := cmd.Flags().GetInt("limit")
+		if len(args) > 0 {
+			uuid := args[0]
+			certDetails, err := client.GetSSLCertificateDetails(uuid)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("UUID: %s\n", certDetails.UUID)
+			fmt.Printf("Comment: %s\n", certDetails.Comment)
+			fmt.Printf("Owner: %s\n", certDetails.Owner)
+			fmt.Printf("Not Before: %s\n", certDetails.NotBefore)
+			fmt.Printf("Not After: %s\n", certDetails.NotAfter)
+			fmt.Printf("Cert: %s\n", certDetails.Cert)
+			fmt.Printf("CA UUID: %s\n", certDetails.CaUuid)
+			fmt.Printf("Created At: %s\n", certDetails.CreatedAt)
+			fmt.Printf("Modified At: %s\n", certDetails.ModifiedAt)
+		} else {
+			keyword, _ := cmd.Flags().GetString("keyword")
+			page, _ := cmd.Flags().GetInt("page")
+			limit, _ := cmd.Flags().GetInt("limit")
 
-		certs, err := client.ListCerts(keyword, page, limit)
-		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
-		}
+			certs, err := client.ListCerts(keyword, page, limit)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
 
-		// 新增表格标题
-		fmt.Printf("%-40s | %-30s | %-15s | %-25s\n", "UUID", "Comment", "Owner", "Expires")
-		fmt.Println(strings.Repeat("-", 40+30+15+25+3*3))
+			// 新增表格边框定义
+			sep := "+"
+			widths := []int{38, 41, 16, 27} // 增加 Comment 列宽度至35
+			for _, w := range widths {
+				sep += strings.Repeat("-", w) + "+"
+			}
+			fmt.Println(sep)
 
-		for _, cert := range certs {
-			fmt.Printf("%-40s | %-30.30s | %-15s | %-25s\n",
-				cert.UUID, cert.Comment, cert.Owner, cert.NotAfter)
+			// 打印表头
+			fmt.Printf("| %-36s | %-39s | %-14s | %-25s |\n", // 调整占位符宽度
+				"UUID", "Comment", "Owner", "Expires")
+			fmt.Println(sep)
+
+			for _, cert := range certs {
+				fmt.Printf("| %-36s | %-39.39s | %-14s | %-25s |\n", // 增加Comment列截断长度
+					cert.UUID, cert.Comment, cert.Owner, cert.NotAfter)
+			}
+			fmt.Println(sep)
 		}
 	},
 }
@@ -429,4 +458,45 @@ type PublicKey struct {
 	Algorithm string `json:"algorithm"`
 	Format    string `json:"format"`
 	Params    string `json:"params"`
+}
+
+// 新增 GetSSLCertificateDetails 方法到 Client
+func (c *Client) GetSSLCertificateDetails(uuid string) (*CertificateInfoDTO, error) {
+	url := fmt.Sprintf("%s/api/v1/user/cert/ssl", c.BaseURL)
+	params := fmt.Sprintf("?keyword=%s&limit=1", uuid)
+	req, err := http.NewRequest("GET", url+params, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("JSESSIONID=%s", c.JSessionID))
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result ResultVO
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.Code != 200 {
+		return nil, fmt.Errorf("API error: %d - %s", result.Code, result.Msg)
+	}
+
+	var pageDTO PageDTOCertificateInfoDTO
+	err = json.Unmarshal(result.Data, &pageDTO)
+	if err != nil {
+		return nil, err
+	}
+
+	// 在列表中查找匹配的证书
+	for _, cert := range pageDTO.List {
+		if cert.UUID == uuid {
+			return &cert, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Certificate not found")
 }

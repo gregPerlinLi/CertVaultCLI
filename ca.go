@@ -24,70 +24,140 @@ var caCmd = &cobra.Command{
 
 // 新增CA列表命令定义
 var listCaCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List CA certificates",
+	Use:   "list [uuid]",
+	Short: "List CA certificates or show details of a specific CA",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		keyword, _ := cmd.Flags().GetString("keyword")
-		page, _ := cmd.Flags().GetInt("page")
-		limit, _ := cmd.Flags().GetInt("limit")
-
-		cas, err := client.ListCAs(keyword, page, limit)
-		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
-		}
-
-		// 新增表格标题
-		fmt.Printf("%-40s | %-15s | %-36s | %-15s | %-30s | %-25s | %s\n",
-			"UUID", "Owner", "Parent CA UUID", "Type", "Comment", "Expires", "Available")
-		fmt.Println(strings.Repeat("-", 40+15+36+15+30+25+8+6*3))
-
-		for _, ca := range cas {
+		if len(args) > 0 {
+			uuid := args[0]
+			caDetails, err := client.GetAdminCADetails(uuid)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
 			var caType string
-			if ca.ParentCa == "" {
+			if caDetails.ParentCa == "" {
 				caType = "Root CA"
-			} else if !ca.AllowSubCa {
+			} else if !caDetails.AllowSubCa {
 				caType = "Leaf CA"
 			} else {
-				caType = "Intermediate CA"
+				caType = "Int CA"
 			}
-			fmt.Printf("%-40s | %-15s | %-36s | %-15s | %-30.30s | %-25s | %t\n",
-				ca.UUID, ca.Owner, ca.ParentCa, caType, ca.Comment, ca.NotAfter, ca.Available)
+			fmt.Printf("UUID: %s\n", caDetails.UUID)
+			fmt.Printf("Owner: %s\n", caDetails.Owner)
+			fmt.Printf("Parent CA UUID: %s\n", caDetails.ParentCa)
+			fmt.Printf("Type: %s\n", caType)
+			fmt.Printf("Comment: %s\n", caDetails.Comment)
+			fmt.Printf("Not Before: %s\n", caDetails.NotBefore)
+			fmt.Printf("Not After: %s\n", caDetails.NotAfter)
+			fmt.Printf("Available: %t\n", caDetails.Available)
+		} else {
+			keyword, _ := cmd.Flags().GetString("keyword")
+			page, _ := cmd.Flags().GetInt("page")
+			limit, _ := cmd.Flags().GetInt("limit")
+
+			cas, err := client.ListAdminCAs(keyword, page, limit)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			// 新增表格边框定义
+			sep := "+"
+			widths := []int{38, 16, 38, 9, 41, 27, 7} // 增加 Comment 列宽度至40
+			for _, w := range widths {
+				sep += strings.Repeat("-", w) + "+"
+			}
+			fmt.Println(sep)
+
+			// 打印表头
+			fmt.Printf("| %-36s | %-14s | %-36s | %-7s | %-39s | %-25s | %-5s |\n", // 调整占位符宽度
+				"UUID", "Owner", "Parent CA UUID", "Type", "Comment", "Expires", "Avail")
+			fmt.Println(sep)
+
+			for _, ca := range cas {
+				var caType string
+				if ca.ParentCa == "" {
+					caType = "Root CA"
+				} else if !ca.AllowSubCa {
+					caType = "Leaf CA"
+				} else {
+					caType = "Int CA"
+				}
+				fmt.Printf("| %-36s | %-14s | %-36s | %-7s | %-39.39s | %-25s | %-5t |\n", // 增加Comment列截断长度
+					ca.UUID, ca.Owner, ca.ParentCa, caType, ca.Comment, ca.NotAfter, ca.Available)
+			}
+			fmt.Println(sep)
 		}
 	},
 }
 
 // 新增分配CA列表命令定义
 var listAllocatedCmd = &cobra.Command{
-	Use:   "list-allocated",
-	Short: "List CA certificates allocated to current user",
+	Use:   "list-allocated [uuid]",
+	Short: "List allocated CAs or show details of a specific CA",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		keyword, _ := cmd.Flags().GetString("keyword")
-		page, _ := cmd.Flags().GetInt("page")
-		limit, _ := cmd.Flags().GetInt("limit")
-
-		cas, err := client.ListAllocatedCAs(keyword, page, limit)
-		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
-		}
-
-		// 新增表格标题
-		fmt.Printf("%-40s | %-15s | %-36s | %-15s | %-30s | %-25s | %s\n",
-			"UUID", "Owner", "Parent CA UUID", "Type", "Comment", "Expires", "Available")
-		fmt.Println(strings.Repeat("-", 40+15+36+15+30+25+8+6*3))
-
-		for _, ca := range cas {
+		if len(args) > 0 {
+			uuid := args[0]
+			caDetails, err := client.GetAllocatedCADetails(uuid)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
 			var caType string
-			if ca.ParentCa == "" {
+			if caDetails.ParentCa == "" {
 				caType = "Root CA"
-			} else if !ca.AllowSubCa {
+			} else if !caDetails.AllowSubCa {
 				caType = "Leaf CA"
 			} else {
-				caType = "Intermediate CA"
+				caType = "Int CA"
 			}
-			fmt.Printf("%-40s | %-15s | %-36s | %-15s | %-30.30s | %-25s | %t\n",
-				ca.UUID, ca.Owner, ca.ParentCa, caType, ca.Comment, ca.NotAfter, ca.Available)
+			fmt.Printf("UUID: %s\n", caDetails.UUID)
+			fmt.Printf("Owner: %s\n", caDetails.Owner)
+			fmt.Printf("Parent CA UUID: %s\n", caDetails.ParentCa)
+			fmt.Printf("Type: %s\n", caType)
+			fmt.Printf("Comment: %s\n", caDetails.Comment)
+			fmt.Printf("Not Before: %s\n", caDetails.NotBefore)
+			fmt.Printf("Not After: %s\n", caDetails.NotAfter)
+			fmt.Printf("Available: %t\n", caDetails.Available)
+		} else {
+			keyword, _ := cmd.Flags().GetString("keyword")
+			page, _ := cmd.Flags().GetInt("page")
+			limit, _ := cmd.Flags().GetInt("limit")
+
+			cas, err := client.ListAllocatedCAs(keyword, page, limit)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			// 新增表格边框定义
+			sep := "+"
+			widths := []int{38, 16, 38, 9, 41, 27, 7} // 增加 Comment 列宽度至40
+			for _, w := range widths {
+				sep += strings.Repeat("-", w) + "+"
+			}
+			fmt.Println(sep)
+
+			// 打印表头
+			fmt.Printf("| %-36s | %-14s | %-36s | %-7s | %-39s | %-25s | %-5s |\n", // 调整占位符宽度
+				"UUID", "Owner", "Parent CA UUID", "Type", "Comment", "Expires", "Avail")
+			fmt.Println(sep)
+
+			for _, ca := range cas {
+				var caType string
+				if ca.ParentCa == "" {
+					caType = "Root CA"
+				} else if !ca.AllowSubCa {
+					caType = "Leaf CA"
+				} else {
+					caType = "Int CA"
+				}
+				fmt.Printf("| %-36s | %-14s | %-36s | %-7s | %-39.39s | %-25s | %-5t |\n", // 增加Comment列截断长度
+					ca.UUID, ca.Owner, ca.ParentCa, caType, ca.Comment, ca.NotAfter, ca.Available)
+			}
+			fmt.Println(sep)
 		}
 	},
 }
@@ -216,37 +286,15 @@ type CaInfoDTO struct {
 	ParentCa   string `json:"parentCa"` // 新增字段：存储母CA UUID
 }
 
-func (c *Client) ListCAs(keyword string, page int, limit int) ([]CaInfoDTO, error) {
+// GetAdminCADetails 新增方法：获取CA详细信息
+func (c *Client) GetAdminCADetails(uuid string) (*CaInfoDTO, error) {
 	url := fmt.Sprintf("%s/api/v1/admin/cert/ca", c.BaseURL)
-	params := ""
-	if keyword != "" {
-		params += fmt.Sprintf("keyword=%s", keyword)
-	}
-	if page > 0 {
-		if params != "" {
-			params += "&"
-		}
-		params += fmt.Sprintf("page=%d", page)
-	}
-	if limit > 0 {
-		if params != "" {
-			params += "&"
-		}
-		params += fmt.Sprintf("limit=%d", limit)
-	}
-	if params != "" {
-		url += "?" + params
-	}
-
-	req, err := http.NewRequest("GET", url, nil)
+	params := fmt.Sprintf("?keyword=%s&limit=1", uuid)
+	req, err := http.NewRequest("GET", url+params, nil)
 	if err != nil {
 		return nil, err
 	}
-
-	if c.JSessionID != "" {
-		req.Header.Set("Cookie", fmt.Sprintf("JSESSIONID=%s", c.JSessionID))
-	}
-
+	req.Header.Set("Cookie", fmt.Sprintf("JSESSIONID=%s", c.JSessionID))
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -269,7 +317,55 @@ func (c *Client) ListCAs(keyword string, page int, limit int) ([]CaInfoDTO, erro
 		return nil, err
 	}
 
-	return pageDTO.List, nil
+	// 在列表中查找匹配的CA
+	for _, ca := range pageDTO.List {
+		if ca.UUID == uuid {
+			return &ca, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Certificate not found")
+}
+
+// GetAllocatedCADetails 新增方法：获取分配到自己的CA详细信息
+func (c *Client) GetAllocatedCADetails(uuid string) (*CaInfoDTO, error) {
+	url := fmt.Sprintf("%s/api/v1/user/cert/ca", c.BaseURL)
+	params := fmt.Sprintf("?keyword=%s&limit=1", uuid)
+	req, err := http.NewRequest("GET", url+params, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("JSESSIONID=%s", c.JSessionID))
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result ResultVO
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.Code != 200 {
+		return nil, fmt.Errorf("API error: %d - %s", result.Code, result.Msg)
+	}
+
+	var pageDTO PageDTOCaInfoDTO
+	err = json.Unmarshal(result.Data, &pageDTO)
+	if err != nil {
+		return nil, err
+	}
+
+	// 在列表中查找匹配的CA
+	for _, ca := range pageDTO.List {
+		if ca.UUID == uuid {
+			return &ca, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Certificate not found")
 }
 
 // GetCACertificate 新增方法：获取CA证书内容
