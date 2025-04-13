@@ -9,6 +9,7 @@ import (
 	"golang.org/x/term"
 	"net/http"
 	"os"
+	"strings"
 	"syscall"
 )
 
@@ -35,6 +36,12 @@ var listCaCmd = &cobra.Command{
 			fmt.Println("Error:", err)
 			os.Exit(1)
 		}
+
+		// 新增表格标题
+		fmt.Printf("%-40s | %-15s | %-36s | %-15s | %-30s | %-25s | %s\n",
+			"UUID", "Owner", "Parent CA UUID", "Type", "Comment", "Expires", "Available")
+		fmt.Println(strings.Repeat("-", 40+15+36+15+30+25+8+6*3))
+
 		for _, ca := range cas {
 			var caType string
 			if ca.ParentCa == "" {
@@ -44,7 +51,7 @@ var listCaCmd = &cobra.Command{
 			} else {
 				caType = "Intermediate CA"
 			}
-			fmt.Printf("UUID: %s\nOwner: %s\nParent CA UUID: %s\nType: %s\nComment: %s\nExpires: %s\nAvailable: %t\n\n",
+			fmt.Printf("%-40s | %-15s | %-36s | %-15s | %-30.30s | %-25s | %t\n",
 				ca.UUID, ca.Owner, ca.ParentCa, caType, ca.Comment, ca.NotAfter, ca.Available)
 		}
 	},
@@ -64,6 +71,12 @@ var listAllocatedCmd = &cobra.Command{
 			fmt.Println("Error:", err)
 			os.Exit(1)
 		}
+
+		// 新增表格标题
+		fmt.Printf("%-40s | %-15s | %-36s | %-15s | %-30s | %-25s | %s\n",
+			"UUID", "Owner", "Parent CA UUID", "Type", "Comment", "Expires", "Available")
+		fmt.Println(strings.Repeat("-", 40+15+36+15+30+25+8+6*3))
+
 		for _, ca := range cas {
 			var caType string
 			if ca.ParentCa == "" {
@@ -73,7 +86,7 @@ var listAllocatedCmd = &cobra.Command{
 			} else {
 				caType = "Intermediate CA"
 			}
-			fmt.Printf("UUID: %s\nOwner: %s\nParent CA UUID: %s\nType: %s\nComment: %s\nExpires: %s\nAvailable: %t\n\n",
+			fmt.Printf("%-40s | %-15s | %-36s | %-15s | %-30.30s | %-25s | %t\n",
 				ca.UUID, ca.Owner, ca.ParentCa, caType, ca.Comment, ca.NotAfter, ca.Available)
 		}
 	},

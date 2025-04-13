@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"syscall"
 )
 
@@ -286,8 +287,12 @@ var listCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		// 新增表格标题
+		fmt.Printf("%-40s | %-30s | %-15s | %-25s\n", "UUID", "Comment", "Owner", "Expires")
+		fmt.Println(strings.Repeat("-", 40+30+15+25+3*3))
+
 		for _, cert := range certs {
-			fmt.Printf("UUID: %s\nComment: %s\nOwner: %s\nExpires: %s\n\n",
+			fmt.Printf("%-40s | %-30.30s | %-15s | %-25s\n",
 				cert.UUID, cert.Comment, cert.Owner, cert.NotAfter)
 		}
 	},
