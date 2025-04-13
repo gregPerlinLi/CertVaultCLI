@@ -44,7 +44,16 @@ var loginCmd = &cobra.Command{
 		fmt.Printf("Logged in successfully. Session saved.\n")
 		fmt.Printf("User: %s (%s)\n", client.User.Username, client.User.DisplayName)
 		fmt.Printf("Email: %s\n", client.User.Email)
-		fmt.Printf("Role: %d\n", client.User.Role)
+		switch client.User.Role {
+		case 1:
+			fmt.Println("Role: User")
+		case 2:
+			fmt.Println("Role: Admin")
+		case 3:
+			fmt.Println("Role: Superadmin")
+		default:
+			fmt.Printf("Role: Unknown (%d)\n", client.User.Role)
+		}
 	},
 }
 
