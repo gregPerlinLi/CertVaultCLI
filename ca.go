@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 	"net/http"
 	"os"
+	"syscall"
 )
 
 // 新增caCmd命令组定义
@@ -62,14 +65,74 @@ var getCaCertCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// 新增BASE64解码逻辑
+		// BASE64解码逻辑
 		decodedCert, decodeErr := base64.StdEncoding.DecodeString(cert)
 		if decodeErr != nil {
 			fmt.Printf("Error decoding certificate: %v\n", decodeErr)
 			os.Exit(1)
 		}
 
-		fmt.Println(string(decodedCert))
+		// 新增输出逻辑
+		outputPath, _ := cmd.Flags().GetString("output")
+		if outputPath == "" {
+			fmt.Println(string(decodedCert))
+		} else {
+			err = writeToFile(outputPath, decodedCert)
+			if err != nil {
+				fmt.Printf("Error writing to file: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("Certificate saved to %s\n", outputPath)
+		}
+	},
+}
+
+// 新增获取CA私钥的命令定义
+var getCAPrivateKeyCmd = &cobra.Command{
+	Use:   "get-privkey [uuid]",
+	Short: "Get CA private key (requires password verification)",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		uuid := args[0]
+		password, _ := cmd.Flags().GetString("password")
+
+		// 密码获取逻辑
+		if password == "" {
+			fmt.Print("Enter your password: ")
+			bytePassword, err := term.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				fmt.Printf("Error reading password: %v\n", err)
+				os.Exit(1)
+			}
+			password = string(bytePassword)
+			fmt.Println() // 新增换行输出
+		}
+
+		privkey, err := client.GetCAPrivateKey(uuid, password)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		// 解码显示私钥（假设返回的是base64编码）
+		decodedBytes, err := base64.StdEncoding.DecodeString(privkey)
+		if err != nil {
+			fmt.Printf("Error decoding private key: %v\n", err)
+			os.Exit(1)
+		}
+
+		// 新增输出逻辑
+		outputPath, _ := cmd.Flags().GetString("output")
+		if outputPath == "" {
+			fmt.Println(string(decodedBytes))
+		} else {
+			err = writeToFile(outputPath, decodedBytes)
+			if err != nil {
+				fmt.Printf("Error writing to file: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("Private Key saved to %s\n", outputPath)
+		}
 	},
 }
 
@@ -191,6 +254,47 @@ func (c *Client) GetCACertificate(uuid string, isChain bool, needRootCa bool) (s
 	return result.Data, nil
 }
 
+// GetCAPrivateKey 新增获取CA私钥的方法
+func (c *Client) GetCAPrivateKey(uuid string, password string) (string, error) {
+	url := fmt.Sprintf("%s/api/v1/admin/cert/ca/%s/privkey", c.BaseURL, uuid)
+	data := map[string]string{
+		"password": password,
+	}
+	body, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Cookie", fmt.Sprintf("JSESSIONID=%s", c.JSessionID))
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+		Data string `json:"data"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return "", err
+	}
+
+	if result.Code != 200 {
+		return "", fmt.Errorf("API error: %d - %s", result.Code, result.Msg)
+	}
+
+	return result.Data, nil
+}
+
 type PageDTOCaInfoDTO struct {
 	Total int64       `json:"total"`
 	List  []CaInfoDTO `json:"list"`
@@ -203,6 +307,13 @@ func init() {
 
 	getCaCertCmd.Flags().Bool("is-chain", false, "Whether to get the certificate chain")
 	getCaCertCmd.Flags().Bool("need-root-ca", true, "Whether to include root CA in chain")
+	getCaCertCmd.Flags().StringP("output", "o", "",
+		"Path to save certificate (default: print to stdout)")
 
-	caCmd.AddCommand(listCaCmd, getCaCertCmd)
+	getCAPrivateKeyCmd.Flags().StringP("password", "p", "",
+		"User password for private key verification")
+	getCAPrivateKeyCmd.Flags().StringP("output", "o", "",
+		"Path to save certificate (default: print to stdout)")
+
+	caCmd.AddCommand(listCaCmd, getCaCertCmd, getCAPrivateKeyCmd)
 }
