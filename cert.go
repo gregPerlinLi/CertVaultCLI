@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
+	"io"
 	"net/http"
 	"os"
 	"syscall"
@@ -292,6 +293,59 @@ var listCmd = &cobra.Command{
 	},
 }
 
+// 新增证书分析命令定义
+var analyzeCmd = &cobra.Command{
+	Use:   "analyze",
+	Short: "Analyze PEM certificate content",
+	Run: func(cmd *cobra.Command, args []string) {
+		filePath, _ := cmd.Flags().GetString("file")
+
+		var certPEM []byte
+		var err error
+
+		if filePath != "" {
+			certPEM, err = os.ReadFile(filePath)
+			if err != nil {
+				fmt.Printf("Error reading file: %v\n", err)
+				os.Exit(1)
+			}
+		} else {
+			certPEM, err = io.ReadAll(os.Stdin)
+			if err != nil {
+				fmt.Printf("Error reading stdin: %v\n", err)
+				os.Exit(1)
+			}
+		}
+
+		// 转换为BASE64字符串
+		certBase64 := base64.StdEncoding.EncodeToString(certPEM)
+
+		analysis, err := client.AnalyzeCertificate(certBase64)
+		if err != nil {
+			fmt.Printf("Analysis failed: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Certificate Analysis:\n")
+		fmt.Printf("Subject: %s\n", analysis.Subject)
+		fmt.Printf("Issuer: %s\n", analysis.Issuer)
+		fmt.Printf("Not Before: %s\n", analysis.NotBefore)
+		fmt.Printf("Not After: %s\n", analysis.NotAfter)
+		fmt.Printf("Serial Number: %s\n", analysis.SerialNumber)
+		fmt.Println("Public Key:")
+		fmt.Printf("  Modulus: %s\n", analysis.PublicKey.Modulus)
+		fmt.Printf("  Exponent: %s\n", analysis.PublicKey.Exponent)
+		fmt.Printf("  Encoded: %s\n", analysis.PublicKey.Encoded)
+		fmt.Printf("  Algorithm: %s\n", analysis.PublicKey.Algorithm)
+		fmt.Printf("  Format: %s\n", analysis.PublicKey.Format)
+		fmt.Printf("  Params: %s\n", analysis.PublicKey.Params)
+		fmt.Println("Extensions:")
+		for k, v := range analysis.Extensions {
+			fmt.Printf("  %s: %s\n", k, v)
+		}
+	},
+}
+
 func init() {
 	listCmd.Flags().StringP("keyword", "k", "", "Search keyword (UUID/comment)")
 	listCmd.Flags().IntP("page", "p", 1, "Page number")
@@ -308,7 +362,10 @@ func init() {
 	getPrivateKeyCmd.Flags().StringP("output", "o", "",
 		"Path to save certificate (default: print to stdout)")
 
-	CertCmd.AddCommand(listCmd, getCertCmd, getPrivateKeyCmd)
+	analyzeCmd.Flags().StringP("file", "f", "",
+		"Path to PEM certificate file (default: read from stdin)")
+
+	CertCmd.AddCommand(listCmd, getCertCmd, getPrivateKeyCmd, analyzeCmd)
 }
 
 // AnalyzeCertificate 新增分析方法到Client结构体
