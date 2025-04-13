@@ -54,35 +54,62 @@ var listCaCmd = &cobra.Command{
 var getCaCertCmd = &cobra.Command{
 	Use:   "get-cert [uuid]",
 	Short: "Get CA certificate content",
-	Args:  cobra.MinimumNArgs(1), // 添加参数验证：必须包含一个位置参数
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		uuid := args[0]
 		isChain, _ := cmd.Flags().GetBool("is-chain")
 		needRootCa, _ := cmd.Flags().GetBool("need-root-ca")
+		analyze, _ := cmd.Flags().GetBool("analyze")
+
 		cert, err := client.GetCACertificate(uuid, isChain, needRootCa)
 		if err != nil {
 			fmt.Println("Error:", err)
 			os.Exit(1)
 		}
 
-		// BASE64解码逻辑
-		decodedCert, decodeErr := base64.StdEncoding.DecodeString(cert)
-		if decodeErr != nil {
-			fmt.Printf("Error decoding certificate: %v\n", decodeErr)
-			os.Exit(1)
-		}
-
-		// 新增输出逻辑
-		outputPath, _ := cmd.Flags().GetString("output")
-		if outputPath == "" {
-			fmt.Println(string(decodedCert))
-		} else {
-			err = writeToFile(outputPath, decodedCert)
+		if analyze {
+			analysis, err := client.AnalyzeCertificate(cert)
 			if err != nil {
-				fmt.Printf("Error writing to file: %v\n", err)
+				fmt.Printf("Analysis failed: %v\n", err)
+			} else {
+				fmt.Printf("Certificate Analysis:\n")
+				fmt.Printf("Subject: %s\n", analysis.Subject)
+				fmt.Printf("Issuer: %s\n", analysis.Issuer)
+				fmt.Printf("Not Before: %s\n", analysis.NotBefore)
+				fmt.Printf("Not After: %s\n", analysis.NotAfter)
+				fmt.Printf("Serial Number: %s\n", analysis.SerialNumber)
+				fmt.Println("Public Key:")
+				fmt.Printf("  Modulus: %s\n", analysis.PublicKey.Modulus)
+				fmt.Printf("  Exponent: %s\n", analysis.PublicKey.Exponent)
+				fmt.Printf("  Encoded: %s\n", analysis.PublicKey.Encoded)
+				fmt.Printf("  Algorithm: %s\n", analysis.PublicKey.Algorithm)
+				fmt.Printf("  Format: %s\n", analysis.PublicKey.Format)
+				fmt.Printf("  Params: %s\n", analysis.PublicKey.Params)
+				fmt.Println("Extensions:")
+				for k, v := range analysis.Extensions {
+					fmt.Printf("  %s: %s\n", k, v)
+				}
+			}
+		} else {
+			// BASE64解码逻辑
+			decodedCert, decodeErr := base64.StdEncoding.DecodeString(cert)
+			if decodeErr != nil {
+				fmt.Printf("Error decoding certificate: %v\n", decodeErr)
 				os.Exit(1)
 			}
-			fmt.Printf("Certificate saved to %s\n", outputPath)
+
+			// 新增输出逻辑
+			outputPath, _ := cmd.Flags().GetString("output")
+			if outputPath == "" {
+				fmt.Println(string(decodedCert))
+			} else {
+				err = writeToFile(outputPath, decodedCert)
+				if err != nil {
+					fmt.Printf("Error writing to file: %v\n", err)
+					os.Exit(1)
+				}
+				fmt.Printf("Certificate saved to %s\n", outputPath)
+			}
 		}
 	},
 }
@@ -307,6 +334,7 @@ func init() {
 
 	getCaCertCmd.Flags().Bool("is-chain", false, "Whether to get the certificate chain")
 	getCaCertCmd.Flags().Bool("need-root-ca", true, "Whether to include root CA in chain")
+	getCaCertCmd.Flags().BoolP("analyze", "a", false, "Analyze certificate details")
 	getCaCertCmd.Flags().StringP("output", "o", "",
 		"Path to save certificate (default: print to stdout)")
 
