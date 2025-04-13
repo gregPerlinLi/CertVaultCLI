@@ -48,5 +48,4 @@ var getUrlCmd = &cobra.Command{
 
 func init() {
 	configCmd.AddCommand(setUrlCmd, getUrlCmd) // 添加新命令
-	RootCmd.AddCommand(configCmd)
 }
