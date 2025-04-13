@@ -50,6 +50,35 @@ var listCaCmd = &cobra.Command{
 	},
 }
 
+// 新增分配CA列表命令定义
+var listAllocatedCmd = &cobra.Command{
+	Use:   "list-allocated",
+	Short: "List CA certificates allocated to current user",
+	Run: func(cmd *cobra.Command, args []string) {
+		keyword, _ := cmd.Flags().GetString("keyword")
+		page, _ := cmd.Flags().GetInt("page")
+		limit, _ := cmd.Flags().GetInt("limit")
+
+		cas, err := client.ListAllocatedCAs(keyword, page, limit)
+		if err != nil {
+			fmt.Println("Error:", err)
+			os.Exit(1)
+		}
+		for _, ca := range cas {
+			var caType string
+			if ca.ParentCa == "" {
+				caType = "Root CA"
+			} else if !ca.AllowSubCa {
+				caType = "Leaf CA"
+			} else {
+				caType = "Intermediate CA"
+			}
+			fmt.Printf("UUID: %s\nOwner: %s\nParent CA UUID: %s\nType: %s\nComment: %s\nExpires: %s\nAvailable: %t\n\n",
+				ca.UUID, ca.Owner, ca.ParentCa, caType, ca.Comment, ca.NotAfter, ca.Available)
+		}
+	},
+}
+
 // 新增获取CA证书的子命令定义
 var getCaCertCmd = &cobra.Command{
 	Use:   "get-cert [uuid]",
@@ -327,10 +356,114 @@ type PageDTOCaInfoDTO struct {
 	List  []CaInfoDTO `json:"list"`
 }
 
+// ListAdminCAs 将现有ListCAs方法重命名为ListAdminCAs
+func (c *Client) ListAdminCAs(keyword string, page int, limit int) ([]CaInfoDTO, error) {
+	url := fmt.Sprintf("%s/api/v1/admin/cert/ca", c.BaseURL)
+	params := ""
+	if keyword != "" {
+		params += fmt.Sprintf("keyword=%s", keyword)
+	}
+	if page > 0 {
+		params += fmt.Sprintf("&page=%d", page)
+	}
+	if limit > 0 {
+		params += fmt.Sprintf("&limit=%d", limit)
+	}
+	if params != "" {
+		url += "?" + params
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.JSessionID != "" {
+		req.Header.Set("Cookie", fmt.Sprintf("JSESSIONID=%s", c.JSessionID))
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result ResultVO
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.Code != 200 {
+		return nil, fmt.Errorf("API error: %d - %s", result.Code, result.Msg)
+	}
+
+	var pageDTO PageDTOCaInfoDTO
+	err = json.Unmarshal(result.Data, &pageDTO)
+	if err != nil {
+		return nil, err
+	}
+
+	return pageDTO.List, nil
+}
+
+// ListAllocatedCAs 新增用户分配CA列表方法
+func (c *Client) ListAllocatedCAs(keyword string, page int, limit int) ([]CaInfoDTO, error) {
+	url := fmt.Sprintf("%s/api/v1/user/cert/ca", c.BaseURL)
+	params := ""
+	if keyword != "" {
+		params += fmt.Sprintf("keyword=%s", keyword)
+	}
+	if page > 0 {
+		params += fmt.Sprintf("&page=%d", page)
+	}
+	if limit > 0 {
+		params += fmt.Sprintf("&limit=%d", limit)
+	}
+	if params != "" {
+		url += "?" + params[1:] // 去除开头多余的&
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("JSESSIONID=%s", c.JSessionID))
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result ResultVO
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.Code != 200 {
+		return nil, fmt.Errorf("API error: %d - %s", result.Code, result.Msg)
+	}
+
+	var pageDTO PageDTOCaInfoDTO
+	err = json.Unmarshal(result.Data, &pageDTO)
+	if err != nil {
+		return nil, err
+	}
+
+	return pageDTO.List, nil
+}
+
+// 在init函数中注册新命令
 func init() {
 	listCaCmd.Flags().StringP("keyword", "k", "", "Search keyword (UUID/comment)")
 	listCaCmd.Flags().IntP("page", "p", 1, "Page number")
 	listCaCmd.Flags().IntP("limit", "l", 10, "Page limit (default 10)")
+
+	listAllocatedCmd.Flags().StringP("keyword", "k", "", "Search keyword (UUID/comment)")
+	listAllocatedCmd.Flags().IntP("page", "p", 1, "Page number")
+	listAllocatedCmd.Flags().IntP("limit", "l", 10, "Page limit (default 10)")
 
 	getCaCertCmd.Flags().Bool("is-chain", false, "Whether to get the certificate chain")
 	getCaCertCmd.Flags().Bool("need-root-ca", true, "Whether to include root CA in chain")
@@ -343,5 +476,5 @@ func init() {
 	getCAPrivateKeyCmd.Flags().StringP("output", "o", "",
 		"Path to save certificate (default: print to stdout)")
 
-	caCmd.AddCommand(listCaCmd, getCaCertCmd, getCAPrivateKeyCmd)
+	caCmd.AddCommand(listCaCmd, listAllocatedCmd, getCaCertCmd, getCAPrivateKeyCmd)
 }
