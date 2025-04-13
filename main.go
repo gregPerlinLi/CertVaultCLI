@@ -93,6 +93,11 @@ func NewClient() *Client {
 	return client
 }
 
+// 新增辅助函数：写入文件
+func writeToFile(path string, data []byte) error {
+	return os.WriteFile(path, data, 0644)
+}
+
 var RootCmd = &cobra.Command{
 	Use:   "cv",
 	Short: "CertVault CLI client",
