@@ -3,7 +3,7 @@
 # 定义变量
 APP_NAME := certvault
 BUILD_DIR := build
-BIN_DIR := bin
+BIN_DIR := /usr/local/bin
 SRC_FILES := $(shell find . -name "*.go")
 GO_FLAGS := -v
 LDFLAGS := -ldflags "-X main.version=$(shell git rev-parse --short HEAD)"
@@ -15,6 +15,7 @@ all: build
 build: $(SRC_FILES)
 	@echo "Building $(APP_NAME)..."
 	@mkdir -p $(BUILD_DIR)
+	go mod tidy
 	go build $(GO_FLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$(APP_NAME) ./main.go
 	@echo "Build completed. Binary located at $(BUILD_DIR)/$(APP_NAME)"
 
