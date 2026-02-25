@@ -82,17 +82,16 @@ func (c *Client) ListUserCAs(keyword string, page, limit int) (*PageDTO[CaInfoDT
 	return &result, nil
 }
 
-// GetUserCACertInfo returns the metadata of a single CA certificate
+// GetUserCACertInfo returns the metadata of a single CA certificate by searching with its UUID as keyword
 func (c *Client) GetUserCACertInfo(uuid string) (*CaInfoDTO, error) {
-	resp, err := c.do(http.MethodGet, fmt.Sprintf("/api/v1/user/cert/ca/%s", uuid), nil)
+	page, err := c.ListUserCAs(uuid, 1, 1)
 	if err != nil {
 		return nil, err
 	}
-	result, err := parseResponse[CaInfoDTO](resp)
-	if err != nil {
-		return nil, err
+	if len(page.List) == 0 {
+		return nil, fmt.Errorf("CA not found: %s", uuid)
 	}
-	return &result, nil
+	return &page.List[0], nil
 }
 
 // GetUserCACert returns the CA certificate content (base64 encoded)
@@ -122,17 +121,16 @@ func (c *Client) ListUserSSLCerts(keyword string, page, limit int) (*PageDTO[Cer
 	return &result, nil
 }
 
-// GetUserSSLCertInfo returns the metadata of a single SSL certificate
+// GetUserSSLCertInfo returns the metadata of a single SSL certificate by searching with its UUID as keyword
 func (c *Client) GetUserSSLCertInfo(uuid string) (*CertInfoDTO, error) {
-	resp, err := c.do(http.MethodGet, fmt.Sprintf("/api/v1/user/cert/ssl/%s", uuid), nil)
+	page, err := c.ListUserSSLCerts(uuid, 1, 1)
 	if err != nil {
 		return nil, err
 	}
-	result, err := parseResponse[CertInfoDTO](resp)
-	if err != nil {
-		return nil, err
+	if len(page.List) == 0 {
+		return nil, fmt.Errorf("certificate not found: %s", uuid)
 	}
-	return &result, nil
+	return &page.List[0], nil
 }
 
 // GetUserSSLCert returns the SSL certificate content (base64 encoded)
