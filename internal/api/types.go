@@ -1,5 +1,7 @@
 package api
 
+import "encoding/json"
+
 // ResultVO is the generic API response wrapper
 type ResultVO[T any] struct {
 	Code      int    `json:"code"`
@@ -178,12 +180,40 @@ type CertAnalysisDTO struct {
 	Extensions   map[string]string `json:"extensions"`
 }
 
-// PublicKeyDTO represents public key information
+// ECPointW represents an ECC public key point (JCE format)
+type ECPointW struct {
+	AffineX string `json:"affineX"`
+	AffineY string `json:"affineY"`
+}
+
+// ECPointQ represents an ECC public key point (BouncyCastle format)
+type ECPointQ struct {
+	X               string `json:"x"`
+	Y               string `json:"y"`
+	CoordinateSystem string `json:"coordinateSystem"`
+}
+
+// Ed25519Point represents an Ed25519 public key point
+type Ed25519Point struct {
+	Y    string `json:"y"`
+	XOdd bool   `json:"xodd"`
+}
+
+// PublicKeyDTO represents public key information.
+// The Params field is json.RawMessage because its JSON type differs by key algorithm:
+// RSA → null, ECC → a JSON object (ECParameterSpec), Ed25519 → a JSON object (NamedParameterSpec).
 type PublicKeyDTO struct {
-	Modulus   string `json:"modulus"`
-	Exponent  string `json:"publicExponent"`
-	Encoded   string `json:"encoded"`
-	Algorithm string `json:"algorithm"`
-	Format    string `json:"format"`
-	Params    string `json:"params"`
+	// RSA-specific fields
+	Modulus  string `json:"modulus"`
+	Exponent string `json:"publicExponent"`
+	// ECC-specific fields
+	W *ECPointW `json:"w"`
+	Q *ECPointQ `json:"q"`
+	// Ed25519-specific fields
+	Point *Ed25519Point `json:"point"`
+	// Common fields
+	Encoded   string          `json:"encoded"`
+	Algorithm string          `json:"algorithm"`
+	Format    string          `json:"format"`
+	Params    json.RawMessage `json:"params"`
 }

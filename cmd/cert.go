@@ -145,9 +145,31 @@ func analyzeCert(certBase64 string) error {
 	fmt.Println(ui.Label("Serial Number", analysis.SerialNumber))
 	fmt.Println(ui.TitleStyle.Render("Public Key"))
 	fmt.Println(ui.Label("Algorithm", analysis.PublicKey.Algorithm))
+	fmt.Println(ui.Label("Format", analysis.PublicKey.Format))
+	// RSA-specific fields
 	if analysis.PublicKey.Modulus != "" {
 		fmt.Println(ui.Label("Modulus", analysis.PublicKey.Modulus))
-		fmt.Println(ui.Label("Exponent", analysis.PublicKey.Exponent))
+		fmt.Println(ui.Label("Public Exponent", analysis.PublicKey.Exponent))
+	}
+	// ECC-specific: JCE W point
+	if analysis.PublicKey.W != nil {
+		fmt.Println(ui.Label("EC Point W (Affine X)", analysis.PublicKey.W.AffineX))
+		fmt.Println(ui.Label("EC Point W (Affine Y)", analysis.PublicKey.W.AffineY))
+	}
+	// ECC-specific: BouncyCastle Q point
+	if analysis.PublicKey.Q != nil {
+		fmt.Println(ui.Label("EC Point Q (X)", analysis.PublicKey.Q.X))
+		fmt.Println(ui.Label("EC Point Q (Y)", analysis.PublicKey.Q.Y))
+		fmt.Println(ui.Label("EC Coordinate System", analysis.PublicKey.Q.CoordinateSystem))
+	}
+	// Ed25519-specific point
+	if analysis.PublicKey.Point != nil {
+		fmt.Println(ui.Label("Ed25519 Point (Y)", analysis.PublicKey.Point.Y))
+		fmt.Printf("%s  %v\n", ui.LabelStyle.Render("Ed25519 X Odd:"), analysis.PublicKey.Point.XOdd)
+	}
+	// Params: render raw JSON (null / string / object)
+	if len(analysis.PublicKey.Params) > 0 && string(analysis.PublicKey.Params) != "null" {
+		fmt.Println(ui.Label("Params", string(analysis.PublicKey.Params)))
 	}
 	if len(analysis.Extensions) > 0 {
 		fmt.Println(ui.TitleStyle.Render("Extensions"))
