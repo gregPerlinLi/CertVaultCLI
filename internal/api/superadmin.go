@@ -39,6 +39,26 @@ func (c *Client) SuperAdminGetUserSessions(username, status string, page, limit 
 	return &result, nil
 }
 
+// SuperAdminGetSessionByUUID finds a specific session by UUID across all pages (superadmin)
+func (c *Client) SuperAdminGetSessionByUUID(username, uuid string) (*LoginRecordDTO, error) {
+	const pageSize = 100
+	for page := 1; ; page++ {
+		result, err := c.SuperAdminGetUserSessions(username, "", page, pageSize)
+		if err != nil {
+			return nil, err
+		}
+		for i := range result.List {
+			if result.List[i].UUID == uuid {
+				return &result.List[i], nil
+			}
+		}
+		if int64(page*pageSize) >= result.Total {
+			break
+		}
+	}
+	return nil, fmt.Errorf("session %s not found for user %s", uuid, username)
+}
+
 // SuperAdminForceLogoutUser force-logouts a user (superadmin)
 func (c *Client) SuperAdminForceLogoutUser(username string) error {
 	resp, err := c.do("DELETE", fmt.Sprintf("/api/v1/superadmin/user/%s/logout", username), nil)

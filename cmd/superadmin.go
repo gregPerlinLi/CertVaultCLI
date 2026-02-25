@@ -53,6 +53,37 @@ var superadminUserSessionsCmd = &cobra.Command{
 	},
 }
 
+var superadminGetSessionCmd = &cobra.Command{
+	Use:   "get-session <username> <uuid>",
+	Short: "Get session detail by UUID (superadmin)",
+	Args:  cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		username, uuid := args[0], args[1]
+		s, err := client.SuperAdminGetSessionByUUID(username, uuid)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
+			os.Exit(1)
+		}
+		online := "No"
+		if s.IsOnline {
+			online = "Yes"
+		}
+		fmt.Println(ui.TitleStyle.Render("Session Detail"))
+		fmt.Println(ui.Label("UUID", s.UUID))
+		fmt.Println(ui.Label("Username", s.Username))
+		fmt.Println(ui.Label("IP Address", s.IPAddress))
+		fmt.Println(ui.Label("Region", s.Region))
+		fmt.Println(ui.Label("Province", s.Province))
+		fmt.Println(ui.Label("City", s.City))
+		fmt.Println(ui.Label("Browser", s.Browser))
+		fmt.Println(ui.Label("OS", s.OS))
+		fmt.Println(ui.Label("Platform", s.Platform))
+		fmt.Println(ui.Label("Login Time", s.LoginTime))
+		fmt.Println(ui.Label("Online", online))
+		return nil
+	},
+}
+
 var superadminForceLogoutCmd = &cobra.Command{
 	Use:   "force-logout <username>",
 	Short: "Force logout a user (superadmin)",
@@ -247,6 +278,7 @@ func init() {
 	superadminCmd.AddCommand(
 		superadminSessionsCmd,
 		superadminUserSessionsCmd,
+		superadminGetSessionCmd,
 		superadminForceLogoutCmd,
 		superadminCreateUserCmd,
 		superadminUpdateUserCmd,

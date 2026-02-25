@@ -75,6 +75,7 @@ func (c *Client) do(method, path string, body interface{}) (*http.Response, erro
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	req.Header.Set("User-Agent", "CertVaultCLI/2.0.0 (CLI)")
 	if c.cfg.JSessionID != "" {
 		req.AddCookie(&http.Cookie{Name: "JSESSIONID", Value: c.cfg.JSessionID})
 	}
