@@ -121,7 +121,7 @@ type SubjectAltName struct {
 // For SSL cert requests (POST /api/v1/user/cert/ssl), populate CaUUID (signing CA) and SubjectAltNames.
 type RequestCertDTO struct {
 	CaUUID             string           `json:"caUuid,omitempty"`
-	AllowSubCa         bool             `json:"allowSubCa,omitempty"`
+	AllowSubCa         bool             `json:"allowSubCa"`
 	Algorithm          string           `json:"algorithm,omitempty"`
 	KeySize            int              `json:"keySize,omitempty"`
 	Country            string           `json:"country"`

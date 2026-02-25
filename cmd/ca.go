@@ -39,11 +39,7 @@ var caListCmd = &cobra.Command{
 			{Title: "Avail", Width: 5},
 		})
 		for _, ca := range data.List {
-			avail := "Yes"
-			if !ca.Available {
-				avail = "No"
-			}
-			t.AddRow([]string{ca.UUID, ca.Owner, ui.FormatCAType(ca.CAType()), ca.Comment, ui.FormatDate(ca.NotAfter), avail})
+			t.AddRow([]string{ca.UUID, ca.Owner, ui.FormatCAType(ca.CAType()), ca.Comment, ui.FormatDate(ca.NotAfter), ui.FormatAvail(ca.Available)})
 		}
 		fmt.Printf("Total: %d CAs\n", data.Total)
 		fmt.Println(t.Render())

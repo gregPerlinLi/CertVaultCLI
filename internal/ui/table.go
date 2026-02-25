@@ -108,6 +108,30 @@ func FormatDate(notAfter string) string {
 	return DateColor(notAfter).Render(notAfter)
 }
 
+// FormatAvail returns the availability string colored by value:
+// "Yes" → green, "No" → red
+func FormatAvail(available bool) string {
+	if available {
+		return lipgloss.NewStyle().Foreground(ColorSuccess).Render("Yes")
+	}
+	return lipgloss.NewStyle().Foreground(ColorError).Render("No")
+}
+
+// FormatRole returns the role name colored by role value:
+// User → green, Admin → blue, Superadmin → red
+func FormatRole(roleName string) string {
+	switch roleName {
+	case "User":
+		return lipgloss.NewStyle().Foreground(ColorSuccess).Render(roleName)
+	case "Admin":
+		return lipgloss.NewStyle().Foreground(ColorInfo).Render(roleName)
+	case "Superadmin":
+		return lipgloss.NewStyle().Foreground(ColorError).Render(roleName)
+	default:
+		return roleName
+	}
+}
+
 // FormatCAType returns the CA type string colored by type:
 // Root CA → red, Int CA → yellow, Leaf CA → green
 func FormatCAType(caType string) string {

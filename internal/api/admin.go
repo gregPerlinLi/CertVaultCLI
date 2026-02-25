@@ -167,3 +167,12 @@ func (c *Client) AdminRenewCA(uuid string, expiry int) error {
 	}
 	return parseEmptyResponse(resp)
 }
+
+// AdminDeleteCA deletes a CA certificate (admin)
+func (c *Client) AdminDeleteCA(uuid string) error {
+	resp, err := c.do(http.MethodDelete, fmt.Sprintf("/api/v1/admin/cert/ca/%s", uuid), nil)
+	if err != nil {
+		return err
+	}
+	return parseEmptyResponse(resp)
+}

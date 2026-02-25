@@ -39,7 +39,7 @@ var adminUsersCmd = &cobra.Command{
 			{Title: "Role", Width: 12},
 		})
 		for _, u := range data.List {
-			t.AddRow([]string{u.Username, u.DisplayName, u.Email, u.RoleName()})
+			t.AddRow([]string{u.Username, u.DisplayName, u.Email, ui.FormatRole(u.RoleName())})
 		}
 		fmt.Printf("Total: %d users\n", data.Total)
 		fmt.Println(t.Render())
@@ -77,11 +77,7 @@ var adminCAListCmd = &cobra.Command{
 			{Title: "Avail", Width: 5},
 		})
 		for _, ca := range data.List {
-			avail := "Yes"
-			if !ca.Available {
-				avail = "No"
-			}
-			t.AddRow([]string{ca.UUID, ca.Owner, ui.FormatCAType(ca.CAType()), ca.Comment, ui.FormatDate(ca.NotAfter), avail})
+			t.AddRow([]string{ca.UUID, ca.Owner, ui.FormatCAType(ca.CAType()), ca.Comment, ui.FormatDate(ca.NotAfter), ui.FormatAvail(ca.Available)})
 		}
 		fmt.Printf("Total: %d CAs\n", data.Total)
 		fmt.Println(t.Render())
@@ -259,7 +255,7 @@ var adminCABoundUsersCmd = &cobra.Command{
 			{Title: "Role", Width: 12},
 		})
 		for _, u := range data.List {
-			t.AddRow([]string{u.Username, u.DisplayName, u.Email, u.RoleName()})
+			t.AddRow([]string{u.Username, u.DisplayName, u.Email, ui.FormatRole(u.RoleName())})
 		}
 		fmt.Printf("Total: %d users\n", data.Total)
 		fmt.Println(t.Render())
@@ -286,7 +282,7 @@ var adminCAUnboundUsersCmd = &cobra.Command{
 			{Title: "Role", Width: 12},
 		})
 		for _, u := range data.List {
-			t.AddRow([]string{u.Username, u.DisplayName, u.Email, u.RoleName()})
+			t.AddRow([]string{u.Username, u.DisplayName, u.Email, ui.FormatRole(u.RoleName())})
 		}
 		fmt.Printf("Total: %d users\n", data.Total)
 		fmt.Println(t.Render())
@@ -360,6 +356,28 @@ var adminCARenewCmd = &cobra.Command{
 	},
 }
 
+var adminCADeleteCmd = &cobra.Command{
+	Use:   "delete <uuid>",
+	Short: "Delete a CA certificate (admin)",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		confirmed, err := ui.Confirm("Are you sure you want to delete this CA certificate?")
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			fmt.Println(ui.Info("Cancelled."))
+			return nil
+		}
+		if err := client.AdminDeleteCA(args[0]); err != nil {
+			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
+			os.Exit(1)
+		}
+		fmt.Println(ui.Success("CA certificate deleted successfully!"))
+		return nil
+	},
+}
+
 func init() {
 	adminUsersCmd.Flags().StringP("keyword", "k", "", "Search keyword")
 	adminUsersCmd.Flags().Int("page", 1, "Page number")
@@ -419,6 +437,7 @@ func init() {
 		adminCACreateRootCmd,
 		adminCACreateIntCmd,
 		adminCARenewCmd,
+		adminCADeleteCmd,
 	)
 	adminCmd.AddCommand(adminUsersCmd, adminCACmd)
 	rootCmd.AddCommand(adminCmd)
