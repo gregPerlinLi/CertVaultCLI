@@ -160,7 +160,7 @@ func analyzeCert(certBase64 string) error {
 	if analysis.PublicKey.Q != nil {
 		fmt.Println(ui.Label("EC Point Q (X)", analysis.PublicKey.Q.X))
 		fmt.Println(ui.Label("EC Point Q (Y)", analysis.PublicKey.Q.Y))
-		fmt.Println(ui.Label("EC Coordinate System", analysis.PublicKey.Q.CoordinateSystem))
+		fmt.Println(ui.Label("EC Coordinate System", fmt.Sprintf("%d", analysis.PublicKey.Q.CoordinateSystem)))
 	}
 	// Ed25519-specific point
 	if analysis.PublicKey.Point != nil {

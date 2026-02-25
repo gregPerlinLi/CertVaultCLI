@@ -188,9 +188,9 @@ type ECPointW struct {
 
 // ECPointQ represents an ECC public key point (BouncyCastle format)
 type ECPointQ struct {
-	X               string `json:"x"`
-	Y               string `json:"y"`
-	CoordinateSystem string `json:"coordinateSystem"`
+	X                string `json:"x"`
+	Y                string `json:"y"`
+	CoordinateSystem int    `json:"coordinateSystem"`
 }
 
 // Ed25519Point represents an Ed25519 public key point
