@@ -46,6 +46,30 @@ var certListCmd = &cobra.Command{
 	},
 }
 
+var certGetInfoCmd = &cobra.Command{
+	Use:   "get <uuid>",
+	Short: "Show detailed info for an SSL certificate",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		uuid := args[0]
+		info, err := client.GetUserSSLCertInfo(uuid)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, ui.Error("Failed to fetch certificate info: "+err.Error()))
+			os.Exit(1)
+		}
+		fmt.Println(ui.TitleStyle.Render("Certificate Info"))
+		fmt.Println(ui.Label("UUID", info.UUID))
+		fmt.Println(ui.Label("CA UUID", info.CaUUID))
+		fmt.Println(ui.Label("Owner", info.Owner))
+		fmt.Println(ui.Label("Comment", info.Comment))
+		fmt.Println(ui.Label("Not Before", info.NotBefore))
+		fmt.Println(ui.Label("Not After", ui.FormatDate(info.NotAfter)))
+		fmt.Println(ui.Label("Created At", info.CreatedAt))
+		fmt.Println(ui.Label("Modified At", info.ModifiedAt))
+		return nil
+	},
+}
+
 var certGetCertCmd = &cobra.Command{
 	Use:   "get-cert <uuid>",
 	Short: "Get SSL certificate content",
@@ -207,6 +231,6 @@ func init() {
 	certGetPrivKeyCmd.Flags().StringP("password", "p", "", "Password for private key decryption")
 	certGetPrivKeyCmd.Flags().StringP("output", "o", "", "Output file path")
 
-	certCmd.AddCommand(certListCmd, certGetCertCmd, certGetPrivKeyCmd, certUpdateCommentCmd)
+	certCmd.AddCommand(certListCmd, certGetInfoCmd, certGetCertCmd, certGetPrivKeyCmd, certUpdateCommentCmd)
 	rootCmd.AddCommand(certCmd)
 }

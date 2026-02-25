@@ -51,6 +51,32 @@ var caListCmd = &cobra.Command{
 	},
 }
 
+var caGetInfoCmd = &cobra.Command{
+	Use:   "get <uuid>",
+	Short: "Show detailed info for a CA certificate",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		uuid := args[0]
+		info, err := client.GetUserCACertInfo(uuid)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, ui.Error("Failed to fetch CA info: "+err.Error()))
+			os.Exit(1)
+		}
+		fmt.Println(ui.TitleStyle.Render("CA Certificate Info"))
+		fmt.Println(ui.Label("UUID", info.UUID))
+		fmt.Println(ui.Label("Owner", info.Owner))
+		fmt.Println(ui.Label("Type", info.CAType()))
+		fmt.Println(ui.Label("Comment", info.Comment))
+		fmt.Println(ui.Label("Available", fmt.Sprintf("%v", info.Available)))
+		fmt.Println(ui.Label("Not Before", info.NotBefore))
+		fmt.Println(ui.Label("Not After", ui.FormatDate(info.NotAfter)))
+		if info.ParentCa != "" {
+			fmt.Println(ui.Label("Parent CA", info.ParentCa))
+		}
+		return nil
+	},
+}
+
 var caGetCertCmd = &cobra.Command{
 	Use:   "get-cert <uuid>",
 	Short: "Get CA certificate content",
@@ -96,6 +122,6 @@ func init() {
 	caGetCertCmd.Flags().StringP("output", "o", "", "Output file path")
 	caGetCertCmd.Flags().BoolP("analyze", "a", false, "Analyze certificate details")
 
-	caCmd.AddCommand(caListCmd, caGetCertCmd)
+	caCmd.AddCommand(caListCmd, caGetInfoCmd, caGetCertCmd)
 	rootCmd.AddCommand(caCmd)
 }
