@@ -86,21 +86,26 @@ func (c *Client) AdminImportCA(dto ImportCADTO) error {
 	}
 	return parseEmptyResponse(resp)
 }
-
-// AdminBindUsersToCA binds users to a CA (admin)
+// AdminBindUsersToCA binds multiple users to a CA (admin)
 func (c *Client) AdminBindUsersToCA(caUUID string, usernames []string) error {
-	body := map[string][]string{"usernames": usernames}
-	resp, err := c.do(http.MethodPost, fmt.Sprintf("/api/v1/admin/cert/ca/%s/bind", caUUID), body)
+	bindings := make([]CABindingDTO, len(usernames))
+	for i, u := range usernames {
+		bindings[i] = CABindingDTO{CaUUID: caUUID, Username: u}
+	}
+	resp, err := c.do(http.MethodPost, "/api/v1/admin/cert/ca/binds/create", bindings)
 	if err != nil {
 		return err
 	}
 	return parseEmptyResponse(resp)
 }
 
-// AdminUnbindUsersFromCA unbinds users from a CA (admin)
+// AdminUnbindUsersFromCA unbinds multiple users from a CA (admin)
 func (c *Client) AdminUnbindUsersFromCA(caUUID string, usernames []string) error {
-	body := map[string][]string{"usernames": usernames}
-	resp, err := c.do("DELETE", fmt.Sprintf("/api/v1/admin/cert/ca/%s/bind", caUUID), body)
+	bindings := make([]CABindingDTO, len(usernames))
+	for i, u := range usernames {
+		bindings[i] = CABindingDTO{CaUUID: caUUID, Username: u}
+	}
+	resp, err := c.do(http.MethodPost, "/api/v1/admin/cert/ca/binds/delete", bindings)
 	if err != nil {
 		return err
 	}
@@ -136,8 +141,8 @@ func (c *Client) AdminGetCAUnboundUsers(caUUID string, page, limit int) (*PageDT
 }
 
 // AdminCreateRootCA creates a root CA (admin)
-func (c *Client) AdminCreateRootCA(dto CreateRootCADTO) error {
-	resp, err := c.do(http.MethodPost, "/api/v1/admin/cert/ca/create/root", dto)
+func (c *Client) AdminCreateRootCA(dto RequestCertDTO) error {
+	resp, err := c.do(http.MethodPost, "/api/v1/admin/cert/ca", dto)
 	if err != nil {
 		return err
 	}
@@ -145,35 +150,18 @@ func (c *Client) AdminCreateRootCA(dto CreateRootCADTO) error {
 }
 
 // AdminCreateIntCA creates an intermediate CA (admin)
-func (c *Client) AdminCreateIntCA(dto CreateIntCADTO) error {
-	resp, err := c.do(http.MethodPost, "/api/v1/admin/cert/ca/create/int", dto)
+func (c *Client) AdminCreateIntCA(dto RequestCertDTO) error {
+	resp, err := c.do(http.MethodPost, "/api/v1/admin/cert/ca", dto)
 	if err != nil {
 		return err
 	}
 	return parseEmptyResponse(resp)
 }
 
-// AdminIssueSSLCert issues an SSL certificate (admin)
-func (c *Client) AdminIssueSSLCert(dto IssueSSLCertDTO) error {
-	resp, err := c.do(http.MethodPost, "/api/v1/admin/cert/ssl/issue", dto)
-	if err != nil {
-		return err
-	}
-	return parseEmptyResponse(resp)
-}
-
-// AdminRenewSSLCert renews an SSL certificate (admin)
-func (c *Client) AdminRenewSSLCert(uuid string) error {
-	resp, err := c.do(http.MethodPost, fmt.Sprintf("/api/v1/admin/cert/ssl/%s/renew", uuid), nil)
-	if err != nil {
-		return err
-	}
-	return parseEmptyResponse(resp)
-}
-
-// AdminDeleteSSLCert deletes an SSL certificate (admin)
-func (c *Client) AdminDeleteSSLCert(uuid string) error {
-	resp, err := c.do("DELETE", fmt.Sprintf("/api/v1/admin/cert/ssl/%s", uuid), nil)
+// AdminRenewCA renews a CA certificate (admin)
+func (c *Client) AdminRenewCA(uuid string, expiry int) error {
+	body := map[string]int{"expiry": expiry}
+	resp, err := c.do(http.MethodPut, fmt.Sprintf("/api/v1/admin/cert/ca/%s", uuid), body)
 	if err != nil {
 		return err
 	}

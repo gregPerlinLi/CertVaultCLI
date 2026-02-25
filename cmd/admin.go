@@ -81,7 +81,7 @@ var adminCAListCmd = &cobra.Command{
 			if !ca.Available {
 				avail = "No"
 			}
-			t.AddRow([]string{ca.UUID, ca.Owner, ca.CAType(), ca.Comment, ca.NotAfter, avail})
+			t.AddRow([]string{ca.UUID, ca.Owner, ui.FormatCAType(ca.CAType()), ca.Comment, ui.FormatDate(ca.NotAfter), avail})
 		}
 		fmt.Printf("Total: %d CAs\n", data.Total)
 		fmt.Println(t.Render())
@@ -182,8 +182,6 @@ var adminCAImportCmd = &cobra.Command{
 		certFile, _ := cmd.Flags().GetString("cert-file")
 		keyFile, _ := cmd.Flags().GetString("key-file")
 		comment, _ := cmd.Flags().GetString("comment")
-		parentCA, _ := cmd.Flags().GetString("parent-ca")
-		allowSubCA, _ := cmd.Flags().GetBool("allow-sub-ca")
 
 		certPEM, err := os.ReadFile(certFile)
 		if err != nil {
@@ -197,11 +195,9 @@ var adminCAImportCmd = &cobra.Command{
 		}
 
 		dto := api.ImportCADTO{
-			Cert:       base64.StdEncoding.EncodeToString(certPEM),
-			PrivKey:    base64.StdEncoding.EncodeToString(keyPEM),
-			Comment:    comment,
-			ParentCa:   parentCA,
-			AllowSubCa: allowSubCA,
+			Certificate: base64.StdEncoding.EncodeToString(certPEM),
+			PrivKey:     base64.StdEncoding.EncodeToString(keyPEM),
+			Comment:     comment,
 		}
 		if err := client.AdminImportCA(dto); err != nil {
 			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
@@ -302,19 +298,18 @@ var adminCACreateRootCmd = &cobra.Command{
 	Use:   "create-root",
 	Short: "Create a root CA (admin)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		dto := api.CreateRootCADTO{}
+		dto := api.RequestCertDTO{}
 		dto.Comment, _ = cmd.Flags().GetString("comment")
 		dto.AllowSubCa, _ = cmd.Flags().GetBool("allow-sub-ca")
-		dto.KeyAlg, _ = cmd.Flags().GetString("key-alg")
+		dto.Algorithm, _ = cmd.Flags().GetString("algorithm")
 		dto.KeySize, _ = cmd.Flags().GetInt("key-size")
-		dto.HashAlg, _ = cmd.Flags().GetString("hash-alg")
 		dto.Country, _ = cmd.Flags().GetString("country")
-		dto.State, _ = cmd.Flags().GetString("state")
-		dto.Locality, _ = cmd.Flags().GetString("locality")
-		dto.Org, _ = cmd.Flags().GetString("org")
-		dto.OrgUnit, _ = cmd.Flags().GetString("org-unit")
+		dto.Province, _ = cmd.Flags().GetString("province")
+		dto.City, _ = cmd.Flags().GetString("city")
+		dto.Organization, _ = cmd.Flags().GetString("organization")
+		dto.OrganizationalUnit, _ = cmd.Flags().GetString("org-unit")
 		dto.CommonName, _ = cmd.Flags().GetString("common-name")
-		dto.NotAfter, _ = cmd.Flags().GetString("not-after")
+		dto.Expiry, _ = cmd.Flags().GetInt("expiry")
 		if err := client.AdminCreateRootCA(dto); err != nil {
 			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
 			os.Exit(1)
@@ -328,20 +323,19 @@ var adminCACreateIntCmd = &cobra.Command{
 	Use:   "create-int",
 	Short: "Create an intermediate CA (admin)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		dto := api.CreateIntCADTO{}
-		dto.ParentCaUUID, _ = cmd.Flags().GetString("parent-ca")
+		dto := api.RequestCertDTO{}
+		dto.CaUUID, _ = cmd.Flags().GetString("parent-ca")
 		dto.Comment, _ = cmd.Flags().GetString("comment")
 		dto.AllowSubCa, _ = cmd.Flags().GetBool("allow-sub-ca")
-		dto.KeyAlg, _ = cmd.Flags().GetString("key-alg")
+		dto.Algorithm, _ = cmd.Flags().GetString("algorithm")
 		dto.KeySize, _ = cmd.Flags().GetInt("key-size")
-		dto.HashAlg, _ = cmd.Flags().GetString("hash-alg")
 		dto.Country, _ = cmd.Flags().GetString("country")
-		dto.State, _ = cmd.Flags().GetString("state")
-		dto.Locality, _ = cmd.Flags().GetString("locality")
-		dto.Org, _ = cmd.Flags().GetString("org")
-		dto.OrgUnit, _ = cmd.Flags().GetString("org-unit")
+		dto.Province, _ = cmd.Flags().GetString("province")
+		dto.City, _ = cmd.Flags().GetString("city")
+		dto.Organization, _ = cmd.Flags().GetString("organization")
+		dto.OrganizationalUnit, _ = cmd.Flags().GetString("org-unit")
 		dto.CommonName, _ = cmd.Flags().GetString("common-name")
-		dto.NotAfter, _ = cmd.Flags().GetString("not-after")
+		dto.Expiry, _ = cmd.Flags().GetInt("expiry")
 		if err := client.AdminCreateIntCA(dto); err != nil {
 			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
 			os.Exit(1)
@@ -351,74 +345,17 @@ var adminCACreateIntCmd = &cobra.Command{
 	},
 }
 
-var adminCertCmd = &cobra.Command{
-	Use:   "cert",
-	Short: "SSL certificate management commands (admin)",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
-	},
-}
-
-var adminCertIssueCmd = &cobra.Command{
-	Use:   "issue",
-	Short: "Issue an SSL certificate (admin)",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		dto := api.IssueSSLCertDTO{}
-		dto.CaUUID, _ = cmd.Flags().GetString("ca-uuid")
-		dto.Comment, _ = cmd.Flags().GetString("comment")
-		dto.KeyAlg, _ = cmd.Flags().GetString("key-alg")
-		dto.KeySize, _ = cmd.Flags().GetInt("key-size")
-		dto.HashAlg, _ = cmd.Flags().GetString("hash-alg")
-		dto.Country, _ = cmd.Flags().GetString("country")
-		dto.State, _ = cmd.Flags().GetString("state")
-		dto.Locality, _ = cmd.Flags().GetString("locality")
-		dto.Org, _ = cmd.Flags().GetString("org")
-		dto.OrgUnit, _ = cmd.Flags().GetString("org-unit")
-		dto.CommonName, _ = cmd.Flags().GetString("common-name")
-		sans, _ := cmd.Flags().GetStringSlice("sans")
-		dto.Sans = sans
-		dto.NotAfter, _ = cmd.Flags().GetString("not-after")
-		if err := client.AdminIssueSSLCert(dto); err != nil {
-			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
-			os.Exit(1)
-		}
-		fmt.Println(ui.Success("SSL certificate issued successfully!"))
-		return nil
-	},
-}
-
-var adminCertRenewCmd = &cobra.Command{
+var adminCARenewCmd = &cobra.Command{
 	Use:   "renew <uuid>",
-	Short: "Renew an SSL certificate (admin)",
+	Short: "Renew a CA certificate (admin)",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := client.AdminRenewSSLCert(args[0]); err != nil {
+		expiry, _ := cmd.Flags().GetInt("expiry")
+		if err := client.AdminRenewCA(args[0], expiry); err != nil {
 			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
 			os.Exit(1)
 		}
-		fmt.Println(ui.Success("Certificate renewed successfully!"))
-		return nil
-	},
-}
-
-var adminCertDeleteCmd = &cobra.Command{
-	Use:   "delete <uuid>",
-	Short: "Delete an SSL certificate (admin)",
-	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		confirmed, err := ui.Confirm("Are you sure you want to delete this certificate?")
-		if err != nil {
-			return err
-		}
-		if !confirmed {
-			fmt.Println(ui.Info("Cancelled."))
-			return nil
-		}
-		if err := client.AdminDeleteSSLCert(args[0]); err != nil {
-			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
-			os.Exit(1)
-		}
-		fmt.Println(ui.Success("Certificate deleted successfully!"))
+		fmt.Println(ui.Success("CA certificate renewed successfully!"))
 		return nil
 	},
 }
@@ -443,8 +380,6 @@ func init() {
 	adminCAImportCmd.Flags().String("cert-file", "", "Path to CA certificate PEM file")
 	adminCAImportCmd.Flags().String("key-file", "", "Path to private key PEM file")
 	adminCAImportCmd.Flags().String("comment", "", "CA comment")
-	adminCAImportCmd.Flags().String("parent-ca", "", "Parent CA UUID (for intermediate CAs)")
-	adminCAImportCmd.Flags().Bool("allow-sub-ca", false, "Allow creating sub-CAs")
 
 	adminCABoundUsersCmd.Flags().Int("page", 1, "Page number")
 	adminCABoundUsersCmd.Flags().Int("limit", 10, "Page size")
@@ -454,34 +389,21 @@ func init() {
 	caCreateFlags := func(cmd *cobra.Command) {
 		cmd.Flags().String("comment", "", "CA comment")
 		cmd.Flags().Bool("allow-sub-ca", false, "Allow creating sub-CAs")
-		cmd.Flags().String("key-alg", "RSA", "Key algorithm (RSA/EC)")
+		cmd.Flags().String("algorithm", "RSA", "Key algorithm (RSA/EC/Ed25519)")
 		cmd.Flags().Int("key-size", 2048, "Key size")
-		cmd.Flags().String("hash-alg", "SHA256withRSA", "Hash algorithm")
-		cmd.Flags().String("country", "", "Country code (e.g. US)")
-		cmd.Flags().String("state", "", "State/Province")
-		cmd.Flags().String("locality", "", "City/Locality")
-		cmd.Flags().String("org", "", "Organization")
+		cmd.Flags().String("country", "", "Country code (e.g. CN)")
+		cmd.Flags().String("province", "", "Province/State")
+		cmd.Flags().String("city", "", "City/Locality")
+		cmd.Flags().String("organization", "", "Organization")
 		cmd.Flags().String("org-unit", "", "Organizational unit")
 		cmd.Flags().String("common-name", "", "Common name")
-		cmd.Flags().String("not-after", "", "Expiry date (RFC3339 or YYYY-MM-DD)")
+		cmd.Flags().Int("expiry", 365, "Validity period in days")
 	}
 	caCreateFlags(adminCACreateRootCmd)
 	caCreateFlags(adminCACreateIntCmd)
 	adminCACreateIntCmd.Flags().String("parent-ca", "", "Parent CA UUID")
 
-	adminCertIssueCmd.Flags().String("ca-uuid", "", "Signing CA UUID")
-	adminCertIssueCmd.Flags().String("comment", "", "Certificate comment")
-	adminCertIssueCmd.Flags().String("key-alg", "RSA", "Key algorithm")
-	adminCertIssueCmd.Flags().Int("key-size", 2048, "Key size")
-	adminCertIssueCmd.Flags().String("hash-alg", "SHA256withRSA", "Hash algorithm")
-	adminCertIssueCmd.Flags().String("country", "", "Country")
-	adminCertIssueCmd.Flags().String("state", "", "State")
-	adminCertIssueCmd.Flags().String("locality", "", "Locality")
-	adminCertIssueCmd.Flags().String("org", "", "Organization")
-	adminCertIssueCmd.Flags().String("org-unit", "", "Org unit")
-	adminCertIssueCmd.Flags().String("common-name", "", "Common name")
-	adminCertIssueCmd.Flags().StringSlice("sans", nil, "Subject Alternative Names")
-	adminCertIssueCmd.Flags().String("not-after", "", "Expiry date")
+	adminCARenewCmd.Flags().Int("expiry", 365, "New validity period in days")
 
 	adminCACmd.AddCommand(
 		adminCAListCmd,
@@ -496,8 +418,8 @@ func init() {
 		adminCAUnboundUsersCmd,
 		adminCACreateRootCmd,
 		adminCACreateIntCmd,
+		adminCARenewCmd,
 	)
-	adminCertCmd.AddCommand(adminCertIssueCmd, adminCertRenewCmd, adminCertDeleteCmd)
-	adminCmd.AddCommand(adminUsersCmd, adminCACmd, adminCertCmd)
+	adminCmd.AddCommand(adminUsersCmd, adminCACmd)
 	rootCmd.AddCommand(adminCmd)
 }

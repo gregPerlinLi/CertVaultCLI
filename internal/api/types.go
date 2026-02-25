@@ -110,63 +110,42 @@ type UpdateRoleDTO struct {
 	Role     int32  `json:"role"`
 }
 
-// CreateRootCADTO is used to create a root CA
-type CreateRootCADTO struct {
-	Comment    string `json:"comment"`
-	AllowSubCa bool   `json:"allowSubCa"`
-	KeyAlg     string `json:"keyAlg"`
-	KeySize    int    `json:"keySize"`
-	HashAlg    string `json:"hashAlg"`
-	Country    string `json:"country"`
-	State      string `json:"state"`
-	Locality   string `json:"locality"`
-	Org        string `json:"org"`
-	OrgUnit    string `json:"orgUnit"`
-	CommonName string `json:"commonName"`
-	NotAfter   string `json:"notAfter"`
+// SubjectAltName represents a single Subject Alternative Name entry
+type SubjectAltName struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
 }
 
-// CreateIntCADTO is used to create an intermediate CA
-type CreateIntCADTO struct {
-	ParentCaUUID string `json:"parentCaUuid"`
-	Comment      string `json:"comment"`
-	AllowSubCa   bool   `json:"allowSubCa"`
-	KeyAlg       string `json:"keyAlg"`
-	KeySize      int    `json:"keySize"`
-	HashAlg      string `json:"hashAlg"`
-	Country      string `json:"country"`
-	State        string `json:"state"`
-	Locality     string `json:"locality"`
-	Org          string `json:"org"`
-	OrgUnit      string `json:"orgUnit"`
-	CommonName   string `json:"commonName"`
-	NotAfter     string `json:"notAfter"`
-}
-
-// IssueSSLCertDTO is used to issue an SSL certificate
-type IssueSSLCertDTO struct {
-	CaUUID     string   `json:"caUuid"`
-	Comment    string   `json:"comment"`
-	KeyAlg     string   `json:"keyAlg"`
-	KeySize    int      `json:"keySize"`
-	HashAlg    string   `json:"hashAlg"`
-	Country    string   `json:"country"`
-	State      string   `json:"state"`
-	Locality   string   `json:"locality"`
-	Org        string   `json:"org"`
-	OrgUnit    string   `json:"orgUnit"`
-	CommonName string   `json:"commonName"`
-	Sans       []string `json:"sans"`
-	NotAfter   string   `json:"notAfter"`
+// RequestCertDTO is the unified DTO for requesting both CA and SSL certificates.
+// For CA requests (POST /api/v1/admin/cert/ca), populate CaUUID (omit for Root CA) and AllowSubCa.
+// For SSL cert requests (POST /api/v1/user/cert/ssl), populate CaUUID (signing CA) and SubjectAltNames.
+type RequestCertDTO struct {
+	CaUUID             string           `json:"caUuid,omitempty"`
+	AllowSubCa         bool             `json:"allowSubCa,omitempty"`
+	Algorithm          string           `json:"algorithm,omitempty"`
+	KeySize            int              `json:"keySize,omitempty"`
+	Country            string           `json:"country"`
+	Province           string           `json:"province"`
+	City               string           `json:"city"`
+	Organization       string           `json:"organization"`
+	OrganizationalUnit string           `json:"organizationalUnit"`
+	CommonName         string           `json:"commonName"`
+	Expiry             int              `json:"expiry"`
+	SubjectAltNames    []SubjectAltName `json:"subjectAltNames,omitempty"`
+	Comment            string           `json:"comment,omitempty"`
 }
 
 // ImportCADTO is used to import a CA certificate
 type ImportCADTO struct {
-	Cert       string `json:"cert"`
-	PrivKey    string `json:"privKey"`
-	Comment    string `json:"comment"`
-	ParentCa   string `json:"parentCa,omitempty"`
-	AllowSubCa bool   `json:"allowSubCa"`
+	Certificate string `json:"certificate"`
+	PrivKey     string `json:"privkey"`
+	Comment     string `json:"comment"`
+}
+
+// CABindingDTO represents a CA-User binding
+type CABindingDTO struct {
+	CaUUID   string `json:"caUuid"`
+	Username string `json:"username"`
 }
 
 // CertAnalysisDTO represents certificate analysis result

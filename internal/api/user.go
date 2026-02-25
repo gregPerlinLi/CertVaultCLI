@@ -176,3 +176,31 @@ func (c *Client) AnalyzeCertificate(certBase64 string) (*CertAnalysisDTO, error)
 	}
 	return &result, nil
 }
+
+// UserRequestSSLCert requests a new SSL certificate (user)
+func (c *Client) UserRequestSSLCert(dto RequestCertDTO) error {
+	resp, err := c.do(http.MethodPost, "/api/v1/user/cert/ssl", dto)
+	if err != nil {
+		return err
+	}
+	return parseEmptyResponse(resp)
+}
+
+// UserRenewSSLCert renews an SSL certificate (user)
+func (c *Client) UserRenewSSLCert(uuid string, expiry int) error {
+	body := map[string]int{"expiry": expiry}
+	resp, err := c.do(http.MethodPut, fmt.Sprintf("/api/v1/user/cert/ssl/%s", uuid), body)
+	if err != nil {
+		return err
+	}
+	return parseEmptyResponse(resp)
+}
+
+// UserDeleteSSLCert deletes an SSL certificate (user)
+func (c *Client) UserDeleteSSLCert(uuid string) error {
+	resp, err := c.do(http.MethodDelete, fmt.Sprintf("/api/v1/user/cert/ssl/%s", uuid), nil)
+	if err != nil {
+		return err
+	}
+	return parseEmptyResponse(resp)
+}

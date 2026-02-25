@@ -149,6 +149,78 @@ var certUpdateCommentCmd = &cobra.Command{
 	},
 }
 
+var certIssueCmd = &cobra.Command{
+	Use:   "issue",
+	Short: "Request a new SSL certificate",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dto := api.RequestCertDTO{}
+		dto.CaUUID, _ = cmd.Flags().GetString("ca-uuid")
+		dto.Comment, _ = cmd.Flags().GetString("comment")
+		dto.Algorithm, _ = cmd.Flags().GetString("algorithm")
+		dto.KeySize, _ = cmd.Flags().GetInt("key-size")
+		dto.Country, _ = cmd.Flags().GetString("country")
+		dto.Province, _ = cmd.Flags().GetString("province")
+		dto.City, _ = cmd.Flags().GetString("city")
+		dto.Organization, _ = cmd.Flags().GetString("organization")
+		dto.OrganizationalUnit, _ = cmd.Flags().GetString("org-unit")
+		dto.CommonName, _ = cmd.Flags().GetString("common-name")
+		dto.Expiry, _ = cmd.Flags().GetInt("expiry")
+		sans, _ := cmd.Flags().GetStringSlice("sans")
+		for _, s := range sans {
+			sanType := "DNS_NAME"
+			value := s
+			// Simple heuristic: if it looks like an IP, mark as IP_ADDRESS
+			if len(s) > 0 && (s[0] >= '0' && s[0] <= '9') {
+				sanType = "IP_ADDRESS"
+			}
+			dto.SubjectAltNames = append(dto.SubjectAltNames, api.SubjectAltName{Type: sanType, Value: value})
+		}
+		if err := client.UserRequestSSLCert(dto); err != nil {
+			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
+			os.Exit(1)
+		}
+		fmt.Println(ui.Success("SSL certificate issued successfully!"))
+		return nil
+	},
+}
+
+var certRenewCmd = &cobra.Command{
+	Use:   "renew <uuid>",
+	Short: "Renew an SSL certificate",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		expiry, _ := cmd.Flags().GetInt("expiry")
+		if err := client.UserRenewSSLCert(args[0], expiry); err != nil {
+			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
+			os.Exit(1)
+		}
+		fmt.Println(ui.Success("Certificate renewed successfully!"))
+		return nil
+	},
+}
+
+var certDeleteCmd = &cobra.Command{
+	Use:   "delete <uuid>",
+	Short: "Delete an SSL certificate",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		confirmed, err := ui.Confirm("Are you sure you want to delete this certificate?")
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			fmt.Println(ui.Info("Cancelled."))
+			return nil
+		}
+		if err := client.UserDeleteSSLCert(args[0]); err != nil {
+			fmt.Fprintln(os.Stderr, ui.Error(err.Error()))
+			os.Exit(1)
+		}
+		fmt.Println(ui.Success("Certificate deleted successfully!"))
+		return nil
+	},
+}
+
 // analyzeCert fetches and displays certificate analysis
 func analyzeCert(certBase64 string) error {
 	var analysis *api.CertAnalysisDTO
@@ -231,6 +303,21 @@ func init() {
 	certGetPrivKeyCmd.Flags().StringP("password", "p", "", "Password for private key decryption")
 	certGetPrivKeyCmd.Flags().StringP("output", "o", "", "Output file path")
 
-	certCmd.AddCommand(certListCmd, certGetInfoCmd, certGetCertCmd, certGetPrivKeyCmd, certUpdateCommentCmd)
+	certIssueCmd.Flags().String("ca-uuid", "", "Signing CA UUID")
+	certIssueCmd.Flags().String("comment", "", "Certificate comment")
+	certIssueCmd.Flags().String("algorithm", "RSA", "Key algorithm (RSA/EC/Ed25519)")
+	certIssueCmd.Flags().Int("key-size", 2048, "Key size")
+	certIssueCmd.Flags().String("country", "", "Country code (e.g. CN)")
+	certIssueCmd.Flags().String("province", "", "Province/State")
+	certIssueCmd.Flags().String("city", "", "City/Locality")
+	certIssueCmd.Flags().String("organization", "", "Organization")
+	certIssueCmd.Flags().String("org-unit", "", "Organizational unit")
+	certIssueCmd.Flags().String("common-name", "", "Common name")
+	certIssueCmd.Flags().Int("expiry", 365, "Validity period in days")
+	certIssueCmd.Flags().StringSlice("sans", nil, "Subject Alternative Names (DNS names or IP addresses)")
+
+	certRenewCmd.Flags().Int("expiry", 365, "New validity period in days")
+
+	certCmd.AddCommand(certListCmd, certGetInfoCmd, certGetCertCmd, certGetPrivKeyCmd, certUpdateCommentCmd, certIssueCmd, certRenewCmd, certDeleteCmd)
 	rootCmd.AddCommand(certCmd)
 }
