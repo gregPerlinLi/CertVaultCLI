@@ -66,10 +66,10 @@ func (t *Table) Render() string {
 			if i < len(row) {
 				cell = row[i]
 			}
-			if len(cell) > col.Width {
+			if lipgloss.Width(cell) > col.Width {
 				cell = cell[:col.Width-3] + "..."
 			}
-			line += " " + cellStyle.Render(fmt.Sprintf("%-*s", col.Width, cell)) + " " + borderStyle.Render("|")
+			line += " " + cellStyle.Width(col.Width).Render(cell) + " " + borderStyle.Render("|")
 		}
 		sb.WriteString(line + "\n")
 	}
@@ -106,4 +106,19 @@ func DateColor(notAfter string) lipgloss.Style {
 // FormatDate formats a date string for display with color coding
 func FormatDate(notAfter string) string {
 	return DateColor(notAfter).Render(notAfter)
+}
+
+// FormatCAType returns the CA type string colored by type:
+// Root CA → red, Int CA → yellow, Leaf CA → green
+func FormatCAType(caType string) string {
+	switch caType {
+	case "Root CA":
+		return lipgloss.NewStyle().Foreground(ColorError).Render(caType)
+	case "Int CA":
+		return lipgloss.NewStyle().Foreground(ColorWarning).Render(caType)
+	case "Leaf CA":
+		return lipgloss.NewStyle().Foreground(ColorSuccess).Render(caType)
+	default:
+		return caType
+	}
 }

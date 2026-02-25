@@ -38,7 +38,7 @@ var certListCmd = &cobra.Command{
 			{Title: "Expires", Width: 25},
 		})
 		for _, cert := range data.List {
-			t.AddRow([]string{cert.UUID, cert.Comment, cert.Owner, cert.NotAfter})
+			t.AddRow([]string{cert.UUID, cert.Comment, cert.Owner, ui.FormatDate(cert.NotAfter)})
 		}
 		fmt.Printf("Total: %d certificates\n", data.Total)
 		fmt.Println(t.Render())
