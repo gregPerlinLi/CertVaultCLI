@@ -6,9 +6,27 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
 
 	"github.com/gregPerlinLi/CertVaultCLI/internal/config"
 )
+
+// userAgent is the User-Agent header sent with every request.
+// Format: Mozilla/5.0 (<OS info>) CertVaultCLI/<version>
+const appVersion = "2.0.0"
+
+var userAgent = func() string {
+	var osInfo string
+	switch runtime.GOOS {
+	case "windows":
+		osInfo = "Windows NT 10.0; Win64; x64"
+	case "darwin":
+		osInfo = "Macintosh; Intel Mac OS X 10_15_7"
+	default:
+		osInfo = "X11; Linux x86_64"
+	}
+	return "Mozilla/5.0 (" + osInfo + ") CertVaultCLI/" + appVersion
+}()
 
 // Client is the HTTP client for the CertVault API
 type Client struct {
@@ -75,7 +93,7 @@ func (c *Client) do(method, path string, body interface{}) (*http.Response, erro
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) CertVaultCLI/2.0.0")
+	req.Header.Set("User-Agent", userAgent)
 	if c.cfg.JSessionID != "" {
 		req.AddCookie(&http.Cookie{Name: "JSESSIONID", Value: c.cfg.JSessionID})
 	}
